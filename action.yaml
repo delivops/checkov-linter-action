@@ -152,7 +152,7 @@ runs:
         SKIP_PATH: "__checkov-linter-action__/custom_policies"
       with:
         directory: ${{ inputs.directory }}
-        file: ${{ steps.changed-files.outputs.all_changed_files }}
+        file: ${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
         check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
         skip_check: ${{ inputs.skip_check_ids }}
         quiet: ${{ inputs.debug != 'true' }}
