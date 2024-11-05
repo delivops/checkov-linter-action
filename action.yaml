@@ -144,7 +144,7 @@ runs:
         echo "::group::⚙️ Create Checkov Config File"
         {
           touch $CONFIG_FILE
-          
+
           if [ "$CHANGED_FILES_ONLY" == "true" ]; then
             yq -i 'del(.directory)' $CONFIG_FILE
             file="$FILES"
@@ -167,7 +167,7 @@ runs:
           yq -i ".skip-path = \"$SKIP_PATH\"" $CONFIG_FILE
           yq -i ".output = \"cli\"" $CONFIG_FILE
           yq -i ".output-file-path = \"$OUTPUT_FILE_PATH\"" $CONFIG_FILE
-          yq -i ".external-checks-dirs = [$EXTERNAL_CHECKS_DIRS]" $CONFIG_FILE
+          yq -i ".external-checks-dirs = [\"$EXTERNAL_CHECKS_DIRS\"]" $CONFIG_FILE
 
           echo "✅ Checkov config file created"
           cat $CONFIG_FILE
