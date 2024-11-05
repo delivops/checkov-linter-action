@@ -118,7 +118,8 @@ runs:
         echo "::endgroup::"
       shell: bash
 
-    - uses: tj-actions/changed-files@v45
+    - name: Get Changed Files
+      uses: tj-actions/changed-files@v45
       id: changed-files
       if: inputs.check_changed_files_only == 'true'
       with:
@@ -137,7 +138,7 @@ runs:
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
-          echo "${{ steps.changed-files.outputs.all_changed_files }}"
+          echo "${{ inputs.check_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'inputs.check_changed_files_only!=true' }}"
         }
         echo "::endgroup::"
       shell: bash
