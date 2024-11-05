@@ -1,0 +1,21 @@
+# directory: env
+file:
+  - env/test yaml with spaces.yaml
+  - env/prod/vops/vops-ui.yaml
+
+check:
+  - CKV2_CUSTOM_1
+  - CKV2_CUSTOM_2
+  - CKV2_CUSTOM_3
+  - CKV2_CUSTOM_4
+
+skip-check: []
+
+compact: true
+quiet: true
+
+skip-path: __checkov-linter-action__
+output: cli
+output-file-path: __results__
+external-checks-dir:
+  - custom_policies

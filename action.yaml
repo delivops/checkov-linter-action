@@ -126,7 +126,7 @@ runs:
         files: |
           ${{ inputs.directory }}/**/*.yml
           ${{ inputs.directory }}/**/*.yaml
-        separator: "\" \""
+        separator: '" "'
 
     - name: Debug
       if: (success() || failure()) && inputs.debug == 'true'
@@ -147,18 +147,17 @@ runs:
     - name: Run Checkov Scan
       id: run-checkov-scan
       uses: bridgecrewio/checkov-action@v12
-      env:
-        ANSI_COLORS_DISABLED: "true"
-        SKIP_PATH: "__checkov-linter-action__/custom_policies"
       with:
-        directory: ${{ inputs.directory }}
-        file: ${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
-        check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
-        skip_check: ${{ inputs.skip_check_ids }}
-        quiet: ${{ inputs.debug != 'true' }}
-        output_format: cli
-        output_file_path: "${{ inputs.checkov_output_folder }}"
-        external_checks_dirs: __checkov-linter-action__/custom_policies
+        config_file: config.yaml
+        # directory: ${{ inputs.directory }}
+        # file: ${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
+        # check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
+        # skip_check: ${{ inputs.skip_check_ids }}
+        # quiet: ${{ inputs.debug != 'true' }}
+        # compact: true
+        # output_format: cli
+        # output_file_path: "${{ inputs.checkov_output_folder }}"
+        # external_checks_dirs: __checkov-linter-action__/custom_policies
 
     - name: Fail if Checkov Scan Failed (exit 0 fallback)
       if: success() && steps.run-checkov-scan.outcome != 'success'
