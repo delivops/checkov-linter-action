@@ -148,7 +148,7 @@ runs:
       id: run-checkov-scan
       uses: bridgecrewio/checkov-action@v12
       with:
-        config_file: config.yaml
+        config_file: __checkov-linter-action__/config.yaml
         # directory: ${{ inputs.directory }}
         # file: ${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
         # check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
