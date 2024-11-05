@@ -6,7 +6,7 @@ inputs:
     description: "Directory to run Checkov in"
     required: true
   changed_files_only:
-    description: "Only check changed files (Default: 'true' for PR context)"
+    description: "Only check changed files (Default: 'true' for PR context, 'false' for push context)"
     required: false
     default: ${{ github.event_name != 'pull_request' && 'true' || 'false' }}
   checkov_output_folder:
@@ -206,12 +206,11 @@ runs:
             echo "$summary"
           fi
 
-          output_summary=$(echo "$summary" | \
-            sed -e '1,/[^[:space:]]/s/^[[:space:]]*//' \
-                -e '/[^[:space:]]/,$s/[[:space:]]*$//' | \
-            sed 's/$/\\n/g' | \
-            tr -d '\n')
-          echo "summary=$output_summary" | tee -a $GITHUB_OUTPUT
+          {
+            echo 'summary<<EOF'
+            echo "$summary"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
         }
         echo "::endgroup::"
       shell: bash
