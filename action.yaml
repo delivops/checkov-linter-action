@@ -126,54 +126,7 @@ runs:
         files: |
           ${{ inputs.directory }}/**/*.yml
           ${{ inputs.directory }}/**/*.yaml
-        separator: '\n'
-
-    - name: Create Checkov Config File
-      env:
-        CONFIG_FILE: __checkov-linter-action__/config.yaml
-        CHANGED_FILES_ONLY: ${{ inputs.changed_files_only }}
-        DIRECTORY: ${{ inputs.directory }}
-        FILES: ${{ steps.changed-files.outputs.all_changed_files}}
-        CHECK_IDS: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
-        SKIP_CHECK_IDS: ${{ inputs.skip_check_ids }}
-        QUIET: ${{ inputs.debug != 'true' }}
-        SKIP_PATH: __checkov-linter-action__
-        OUTPUT_FILE_PATH: ${{ inputs.checkov_output_folder }}
-        EXTERNAL_CHECKS_DIRS: __checkov-linter-action__/custom_policies
-      run: |
-        echo "::group::⚙️ Create Checkov Config File"
-        {
-          touch $CONFIG_FILE
-          
-          if [ "$CHANGED_FILES_ONLY" == "true" ]; then
-            yq -i 'del(.directory)' $CONFIG_FILE
-            file="$FILES"
-            yq -i ".file = \"$file\" | .file |= split(\"\\n\")" $CONFIG_FILE
-          else
-            yq -i 'del(.file)' $CONFIG_FILE
-            directory="$DIRECTORY"
-            yq -i ".directory = \"$directory\"" $CONFIG_FILE
-          fi
-          
-          check="$CHECK_IDS"
-          yq -i ".check = \"$check\" | .check |= split(\",\")" $CONFIG_FILE
-          
-          skip_check="$SKIP_CHECK_IDS"
-          yq -i ".skip-check = \"$skip_check\" | .skip-check |= split(\",\")" $CONFIG_FILE
-          
-          yq -i ".compact = true" $CONFIG_FILE
-          yq -i ".quiet = $QUIET" $CONFIG_FILE
-          
-          yq -i ".skip-path = \"$SKIP_PATH\"" $CONFIG_FILE
-          yq -i ".output = \"cli\"" $CONFIG_FILE
-          yq -i ".output-file-path = \"$OUTPUT_FILE_PATH\"" $CONFIG_FILE
-          yq -i ".external-checks-dir = [\"$EXTERNAL_CHECKS_DIRS\"]" $CONFIG_FILE
-
-          echo "✅ Checkov config file created"
-          cat $CONFIG_FILE
-        }
-        echo "::endgroup::"
-      shell: bash
+        separator: "\" \""
 
     - name: Debug
       if: (success() || failure()) && inputs.debug == 'true'
@@ -181,10 +134,12 @@ runs:
         echo "::group::🐛 Debug"
         {
           echo "[debug] Found check IDs: ${{ steps.get-custom-policy-check-ids.outputs.check_ids }}"
+          echo "[debug] include_built_in_checks: ${{ inputs.include_built_in_checks }}"
+          echo "[debug] check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}"
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
-          echo -e "${{ inputs.changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'inputs.changed_files_only!=true' }}"
+          echo '${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || 'inputs.changed_files_only!=true' }}' | sed 's/\" \"/\"\n\"/g'
         }
         echo "::endgroup::"
       shell: bash
@@ -192,18 +147,17 @@ runs:
     - name: Run Checkov Scan
       id: run-checkov-scan
       uses: bridgecrewio/checkov-action@v12
+      env:
+        SKIP_PATH: "__checkov-linter-action__/custom_policies"
       with:
-        config_file: __checkov-linter-action__/config.yaml
         directory: ${{ inputs.directory }}
-        skip_path: ${{ inputs.changed_files_only == 'true' && inputs.directory || '' }}
-        # file: ${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
-        # check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
-        # skip_check: ${{ inputs.skip_check_ids }}
-        # quiet: ${{ inputs.debug != 'true' }}
-        # compact: true
-        # output_format: cli
-        # output_file_path: "${{ inputs.checkov_output_folder }}"
-        # external_checks_dirs: __checkov-linter-action__/custom_policies
+        file: ${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
+        check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
+        skip_check: ${{ inputs.skip_check_ids }}
+        quiet: ${{ inputs.debug != 'true' }}
+        output_format: cli
+        output_file_path: "${{ inputs.checkov_output_folder }}"
+        external_checks_dirs: __checkov-linter-action__/custom_policies
 
     - name: Fail if Checkov Scan Failed (exit 0 fallback)
       if: success() && steps.run-checkov-scan.outcome != 'success'
@@ -211,14 +165,16 @@ runs:
         echo "::group::❗ Fail if Checkov Scan Failed (exit 0 fallback)"
         {
           if [ ! -f "${{ inputs.checkov_output_folder }}/results_cli.txt" ]; then
-            echo "::error::❌ Checkov results file not found!"
-            exit 1
-          elif grep -q 'FAILED for resource:' "${{ inputs.checkov_output_folder }}/results_cli.txt"; then
-            echo "::error::❌ Failed Checkov checks found"
+            echo "❌ Checkov results file not found!" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
             exit 1
           fi
 
-          echo "✅ All Checkov checks passed"
+          if grep -q 'FAILED for resource:' "${{ inputs.checkov_output_folder }}/results_cli.txt"; then
+            echo "❌ Failed Checkov checks found"
+            exit 1
+          else
+            echo "✅ All Checkov checks passed"
+          fi
         }
         echo "::endgroup::"
       shell: bash
@@ -247,7 +203,7 @@ runs:
             fi
           else
             summary="❌ Checkov results not found"
-            echo "::error::$summary"
+            echo "$summary"
           fi
 
           {
