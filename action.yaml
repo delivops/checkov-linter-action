@@ -48,7 +48,7 @@ runs:
         {
           mkdir -p "${{ inputs.checkov_output_folder }}"
           if [ ! -d "${{ inputs.directory }}" ]; then
-            echo "❌ Directory ${{ inputs.directory }} does not exist" ${{ inputs.publish_to_step_summary == "true" && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "❌ Directory ${{ inputs.directory }} does not exist" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
             exit 1
           fi
           
@@ -68,8 +68,8 @@ runs:
         {
           invalid_files=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
-            echo "❌ Invalid YAML files found:" ${{ inputs.publish_to_step_summary == "true" && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
-            echo "$invalid_files" ${{ inputs.publish_to_step_summary == "true" && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "❌ Invalid YAML files found:" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "$invalid_files" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
             exit 1
           fi
           
@@ -90,14 +90,14 @@ runs:
         echo "::group::🔍 Validate Custom Policies"
         {
           if [ ! -d "__checkov-linter-action__/custom_policies" ]; then
-            echo "❌ Custom policies directory not found" ${{ inputs.publish_to_step_summary == "true" && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "❌ Custom policies directory not found" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
             exit 1
           fi
           
           invalid_files=$(find '__checkov-linter-action__/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
-            echo "❌ Invalid custom policy files found:" ${{ inputs.publish_to_step_summary == "true" && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
-            echo "$invalid_files" ${{ inputs.publish_to_step_summary == "true" && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "❌ Invalid custom policy files found:" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "$invalid_files" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
             exit 1
           fi
           
@@ -165,7 +165,7 @@ runs:
         echo "::group::❗ Fail if Checkov Scan Failed (exit 0 fallback)"
         {
           if [ ! -f "${{ inputs.checkov_output_folder }}/results_cli.txt" ]; then
-            echo "❌ Checkov results file not found!" ${{ inputs.publish_to_step_summary == "true" && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "❌ Checkov results file not found!" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
             exit 1
           fi
 
