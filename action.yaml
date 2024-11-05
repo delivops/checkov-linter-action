@@ -126,7 +126,7 @@ runs:
         files: |
           ${{ inputs.directory }}/**/*.yml
           ${{ inputs.directory }}/**/*.yaml
-        separator: "'"
+        separator: "\""
 
     - name: Debug
       if: (success() || failure()) && inputs.debug == 'true'
@@ -139,7 +139,7 @@ runs:
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
-          echo "${{ inputs.changed_files_only == 'true' && format('\'{0}\'', steps.changed-files.outputs.all_changed_files) || 'inputs.changed_files_only!=true' }}"
+          echo "${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || 'inputs.changed_files_only!=true' }}"
         }
         echo "::endgroup::"
       shell: bash
