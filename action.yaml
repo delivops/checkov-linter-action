@@ -5,6 +5,10 @@ inputs:
   directory:
     description: "Directory to run Checkov in"
     required: true
+  changed_files_only:
+    description: "Only check changed files (Default: 'true' for PR context)"
+    required: false
+    default: ${{ github.event_name != 'pull_request' && 'true' || 'false' }}
   checkov_output_folder:
     description: "Output folder for Checkov results"
     required: false
@@ -29,6 +33,11 @@ inputs:
     description: "Print debug information"
     required: false
     default: "false"
+
+outputs:
+  summary:
+    description: "Checkov results summary"
+    value: ${{ steps.publish-checkov-results.outputs.summary }}
 
 runs:
   using: "composite"
@@ -77,7 +86,7 @@ runs:
           echo "❌ Custom policies directory not found" | tee -a $GITHUB_STEP_SUMMARY
           exit 1  
         fi
-        
+
         invalid_files=$(find '__checkov-linter-action__/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
         if [ -n "$invalid_files" ]; then
           echo "❌ Invalid custom policy files found:" | tee -a $GITHUB_STEP_SUMMARY
@@ -100,6 +109,14 @@ runs:
         echo "::endgroup::"
       shell: bash
 
+    - uses: tj-actions/changed-files@v45
+      id: changed-files
+      if: inputs.check_changed_files_only == 'true'
+      with:
+        files: |
+          ${{ inputs.directory }}/**/*.yml
+          ${{ inputs.directory }}/**/*.yaml
+
     - name: Debug
       if: (success() || failure()) && inputs.debug == 'true'
       run: |
@@ -111,6 +128,8 @@ runs:
           echo "[debug] check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-check-ids.outputs.check_ids) }}"
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
+          echo "[debug] Changed files:"
+          echo "${{ steps.changed-files.outputs.files }}"
         }
         echo "::endgroup::"
       shell: bash
@@ -123,6 +142,7 @@ runs:
         SKIP_PATH: "__checkov-linter-action__/custom_policies"
       with:
         directory: ${{ inputs.directory }}
+        file: ${{ steps.changed-files.outputs.files }}
         check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-check-ids.outputs.check_ids) }}
         skip_check: ${{ inputs.skip_check_ids }}
         quiet: ${{ inputs.debug != 'true' }}
@@ -151,17 +171,22 @@ runs:
       shell: bash
 
     - name: Publish Checkov Results
+      id: publish-checkov-results
       if: (failure() || success()) && inputs.publish_to_job_summary == 'true'
       run: |
         echo "::group::📝 Publish Checkov Results"
         {
           if [ -f "${{ inputs.checkov_output_folder }}/results_cli.txt" ]; then
-            cat "${{ inputs.checkov_output_folder }}/results_cli.txt" | sed -E '
+            summary=$(cat "${{ inputs.checkov_output_folder }}/results_cli.txt" | sed -E '
               s/\x1b\[[0-9;]*[mGKH]//g; 
               s/^(\t)PASSED/✅\1PASSED/g;
               s/^(\t)FAILED/❌\1FAILED/g;
               s/^Check:/📋 Check:/g
-            ' >> $GITHUB_STEP_SUMMARY
+            ')
+            echo "summary<<EOF" >> $GITHUB_OUTPUT
+            echo "$summary" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "$summary" >> $GITHUB_STEP_SUMMARY
             echo "✅ Checkov results published to github job summary"
           else
             echo "❌ Checkov results file not found, skipping publish"
