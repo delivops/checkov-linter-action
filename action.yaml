@@ -8,7 +8,7 @@ inputs:
   changed_files_only:
     description: "Only check changed files (Default: 'true' for PR context, 'false' for push context)"
     required: false
-    default: ${{ github.event_name != 'pull_request' && 'true' || 'false' }}
+    default: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
   checkov_output_folder:
     description: "Output folder for Checkov results"
     required: false
@@ -133,7 +133,6 @@ runs:
         {
           echo "[debug] Found check IDs: ${{ steps.get-custom-policy-check-ids.outputs.check_ids }}"
           echo "[debug] include_built_in_checks: ${{ inputs.include_built_in_checks }}"
-          echo "[debug] check_ids: ${{ inputs.check_ids }}"
           echo "[debug] check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}"
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
