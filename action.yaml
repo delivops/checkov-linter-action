@@ -143,6 +143,8 @@ runs:
       run: |
         echo "::group::⚙️ Create Checkov Config File"
         {
+          touch $CONFIG_FILE
+          
           if [ "$CHANGED_FILES_ONLY" == "true" ]; then
             yq -i 'del(.directory)' $CONFIG_FILE
             file="$FILES"
@@ -205,7 +207,7 @@ runs:
             echo "::error::❌ Failed Checkov checks found"
             exit 1
           fi
-          
+
           echo "✅ All Checkov checks passed"
         }
         echo "::endgroup::"
