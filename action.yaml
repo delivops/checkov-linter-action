@@ -184,7 +184,7 @@ runs:
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
-          echo "${{ inputs.changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'inputs.changed_files_only!=true' }}"
+          echo -e "${{ inputs.changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'inputs.changed_files_only!=true' }}"
         }
         echo "::endgroup::"
       shell: bash
@@ -194,7 +194,7 @@ runs:
       uses: bridgecrewio/checkov-action@v12
       with:
         config_file: __checkov-linter-action__/config.yaml
-        directory: ${{ inputs.changed_files_only == 'true' && inputs.directory || '' }}
+        directory: ${{ inputs.changed_files_only != 'true' && inputs.directory || '' }}
         # file: ${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
         # check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
         # skip_check: ${{ inputs.skip_check_ids }}
