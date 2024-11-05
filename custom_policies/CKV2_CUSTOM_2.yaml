@@ -1,0 +1,49 @@
+metadata:
+  id: "CKV2_CUSTOM_2"
+  name: "Ensure ignoreDifferences and syncOptions are set correctly when autoscaling is enabled"
+  category: ""
+  severity: "MEDIUM"
+definition:
+  or:
+    - not:
+        # If the chart is not a DELIVOPS app chart, exit with PASSED
+        and:
+          - cond_type: "attribute"
+            attribute: "spec.source.repoURL"
+            operator: "equals"
+            value: "https://delivops.github.io/helm-charts"
+          - cond_type: "attribute"
+            attribute: "spec.source.chart"
+            operator: "equals"
+            value: "app"
+    - or:
+        - not:
+            - or:
+                - cond_type: "attribute"
+                  attribute: "spec.source.helm.valuesObject.autoscaling.enabled"
+                  operator: "is_true"
+                - cond_type: "attribute"
+                  attribute: "spec.source.helm.valuesObject.autoscalingKeda.enabled"
+                  operator: "is_true"
+        - and:
+            - and:
+                - cond_type: "attribute"
+                  attribute: "spec.syncPolicy.syncOptions"
+                  operator: "exists"
+                - cond_type: "attribute"
+                  attribute: "spec.syncPolicy.syncOptions"
+                  operator: "is_not_empty"
+                - cond_type: "attribute"
+                  attribute: "spec.syncPolicy.syncOptions"
+                  operator: "contains"
+                  value: "RespectIgnoreDifferences=true"
+            - and:
+                - cond_type: "attribute"
+                  attribute: "spec.ignoreDifferences"
+                  operator: "exists"
+                - cond_type: "attribute"
+                  attribute: "spec.ignoreDifferences"
+                  operator: "is_not_empty"
+                - cond_type: "attribute"
+                  attribute: "spec.ignoreDifferences[?(@.group=='apps' && @.kind=='Deployment' && @.jsonPointers[?(@=='/spec/replicas')])]"
+                  operator: "jsonpath_exists"

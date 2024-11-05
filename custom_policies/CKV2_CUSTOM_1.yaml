@@ -1,0 +1,32 @@
+metadata:
+  id: "CKV2_CUSTOM_1"
+  name: "Ensure resources have CPU and memory limits and requests defined"
+  category: ""
+  severity: "HIGH"
+definition:
+  or:
+    - not:
+        # If the chart is not a DELIVOPS app chart, exit with PASSED
+        and:
+          - cond_type: "attribute"
+            attribute: "spec.source.repoURL"
+            operator: "equals"
+            value: "https://delivops.github.io/helm-charts"
+          - cond_type: "attribute"
+            attribute: "spec.source.chart"
+            operator: "equals"
+            value: "app"
+    - and:
+        # If the resources do not have CPU and memory limits and requests defined, exit with FAILED
+        - cond_type: "attribute"
+          attribute: "spec.source.helm.valuesObject.resources.limits.cpu"
+          operator: "exists"
+        - cond_type: "attribute"
+          attribute: "spec.source.helm.valuesObject.resources.limits.memory"
+          operator: "exists"
+        - cond_type: "attribute"
+          attribute: "spec.source.helm.valuesObject.resources.requests.cpu"
+          operator: "exists"
+        - cond_type: "attribute"
+          attribute: "spec.source.helm.valuesObject.resources.requests.memory"
+          operator: "exists"

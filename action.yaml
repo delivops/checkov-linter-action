@@ -1,0 +1,171 @@
+name: "Checkov Application Manifests Linting"
+description: "Run Checkov linting on application manifests"
+
+inputs:
+  directory:
+    description: "Directory to run Checkov in"
+    required: true
+  checkov_output_folder:
+    description: "Output folder for Checkov results"
+    required: false
+    default: "__results__"
+  check_ids:
+    description: "Comma-separated list of Checkov check IDs to run. If not provided, all custom checks will be run."
+    required: false
+    default: ""
+  include_built_in_checks:
+    description: "Include built-in checks in the scan. Defaults to true."
+    required: false
+    default: "false"
+  skip_check_ids:
+    description: "Comma-separated list of Checkov check IDs to skip. If not provided, no checks will be skipped."
+    required: false
+    default: ""
+  publish_to_job_summary:
+    description: "Publish Checkov results to github job summary"
+    required: false
+    default: "false"
+  debug:
+    description: "Print debug information"
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate Output and Check Directories
+      run: |
+        echo "::group::📁 Validate Output and Check Directories"
+        mkdir -p "${{ inputs.checkov_output_folder }}"
+        if [ ! -d "${{ inputs.directory }}" ]; then
+          echo "❌ Directory ${{ inputs.directory }} does not exist" | tee -a $GITHUB_STEP_SUMMARY
+          exit 1
+        fi  
+        echo "✅ Directories validated"
+        echo "::endgroup::"
+      shell: bash
+
+    - name: Install yq
+      uses: mikefarah/yq@master
+      with:
+        cmd: yq --version
+
+    - name: Validate YAML Files
+      run: |
+        echo "::group::🔍 Validate YAML Files"
+        invalid_files=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+        if [ -n "$invalid_files" ]; then
+          echo "❌ Invalid YAML files found:" | tee -a $GITHUB_STEP_SUMMARY  
+          echo "$invalid_files" | tee -a $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "✅ All YAML files are valid" 
+        echo "::endgroup::"
+      shell: bash
+
+    - name: Checkout Custom Policies
+      uses: actions/checkout@v4
+      with:
+        repository: delivops/checkov-linter-action
+        sparse-checkout: custom_policies
+        path: __checkov-linter-action__
+
+    - name: Validate Custom Policies
+      run: |
+        echo "::group::🔍 Validate Custom Policies"    
+        if [ ! -d "__checkov-linter-action__/custom_policies" ]; then
+          echo "❌ Custom policies directory not found" | tee -a $GITHUB_STEP_SUMMARY
+          exit 1  
+        fi
+        
+        invalid_files=$(find '__checkov-linter-action__/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+        if [ -n "$invalid_files" ]; then
+          echo "❌ Invalid custom policy files found:" | tee -a $GITHUB_STEP_SUMMARY
+          echo "$invalid_files" | tee -a $GITHUB_STEP_SUMMARY  
+          exit 1
+        fi
+        echo "✅ Custom policies validated"
+        echo "::endgroup::"
+      shell: bash
+
+    - name: Get Custom Check IDs
+      id: get-custom-check-ids
+      run: |
+        echo "::group::🆔 Get Custom Check IDs"
+        {
+          check_ids=$(find '__checkov-linter-action__/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -exec yq '.metadata.id' {} \; | tr '\n' ',' | sed 's/,$//')
+          echo "check_ids=$check_ids" >> $GITHUB_OUTPUT
+          echo "Found check IDs: $check_ids"
+        }
+        echo "::endgroup::"
+      shell: bash
+
+    - name: Debug
+      if: (success() || failure()) && inputs.debug == 'true'
+      run: |
+        echo "::group::🐛 Debug"
+        {
+          echo "[debug] Found check IDs: ${{ steps.get-custom-check-ids.outputs.check_ids }}"
+          echo "[debug] include_built_in_checks: ${{ inputs.include_built_in_checks }}"
+          echo "[debug] check_ids: ${{ inputs.check_ids }}"
+          echo "[debug] check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-check-ids.outputs.check_ids) }}"
+          echo '[debug] Dir tree:'
+          ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
+        }
+        echo "::endgroup::"
+      shell: bash
+
+    - name: Run Checkov
+      id: run-checkov
+      uses: bridgecrewio/checkov-action@v12
+      env:
+        ANSI_COLORS_DISABLED: "true"
+        SKIP_PATH: "__checkov-linter-action__/custom_policies"
+      with:
+        directory: ${{ inputs.directory }}
+        check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-check-ids.outputs.check_ids) }}
+        skip_check: ${{ inputs.skip_check_ids }}
+        quiet: ${{ inputs.debug != 'true' }}
+        output_format: cli
+        output_file_path: "${{ inputs.checkov_output_folder }}"
+        external_checks_dirs: __checkov-linter-action__/custom_policies
+
+    - name: Fail if Checkov Checks Failed (exit 0 fallback)
+      if: success() && steps.run-checkov.outcome == 'success'
+      run: |
+        echo "::group::❗ Fail if Checkov Checks Failed (exit 0 fallback)"
+        {
+          if [ ! -f "${{ inputs.checkov_output_folder }}/results_cli.txt" ]; then
+            echo "❌ Checkov results file not found!" | tee -a $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          if grep -q 'FAILED for resource:' "${{ inputs.checkov_output_folder }}/results_cli.txt"; then
+            echo "❌ Failed Checkov checks found"
+            exit 1  
+          else
+            echo "✅ All Checkov checks passed"
+          fi
+        }
+        echo "::endgroup::"
+      shell: bash
+
+    - name: Publish Checkov Results
+      if: (failure() || success()) && inputs.publish_to_job_summary == 'true'
+      run: |
+        echo "::group::📝 Publish Checkov Results"
+        {
+          if [ -f "${{ inputs.checkov_output_folder }}/results_cli.txt" ]; then
+            cat "${{ inputs.checkov_output_folder }}/results_cli.txt" | sed -E '
+              s/\x1b\[[0-9;]*[mGKH]//g; 
+              s/^(\t)PASSED/✅\1PASSED/g;
+              s/^(\t)FAILED/❌\1FAILED/g;
+              s/^Check:/📋 Check:/g
+            ' >> $GITHUB_STEP_SUMMARY
+            echo "✅ Checkov results published to github job summary"
+          else
+            echo "❌ Checkov results file not found, skipping publish"
+          fi
+        }
+        echo "::endgroup::"
+      shell: bash

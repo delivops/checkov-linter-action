@@ -1,0 +1,38 @@
+metadata:
+  id: "CKV2_CUSTOM_3"
+  name: "Ensure ingress annotations and hosts are set efficiently based on hostname source (defined-hosts-only) without certificate ARN (auto detected) and explicit hostname"
+  category: ""
+  severity: "LOW"
+definition:
+  or:
+    - not:
+        # If the chart is not a DELIVOPS app chart, exit with PASSED
+        and:
+          - cond_type: "attribute"
+            attribute: "spec.source.repoURL"
+            operator: "equals"
+            value: "https://delivops.github.io/helm-charts"
+          - cond_type: "attribute"
+            attribute: "spec.source.chart"
+            operator: "equals"
+            value: "app"
+    - or:
+        - not:
+            - and:
+                - cond_type: "attribute"
+                  attribute: "spec.source.helm.valuesObject.ingress.annotations['external-dns.alpha.kubernetes.io/ingress-hostname-source']"
+                  operator: "jsonpath_exists"
+                - cond_type: "attribute"
+                  attribute: "spec.source.helm.valuesObject.ingress.annotations['external-dns.alpha.kubernetes.io/ingress-hostname-source']"
+                  operator: "jsonpath_equals"
+                  value: "defined-hosts-only"
+        - and:
+            - cond_type: "attribute"
+              attribute: "spec.source.helm.valuesObject.ingress.annotations['external-dns.alpha.kubernetes.io/hostname']"
+              operator: "jsonpath_not_exists"
+            - cond_type: "attribute"
+              attribute: "spec.source.helm.valuesObject.ingress.annotations['alb.ingress.kubernetes.io/certificate-arn']"
+              operator: "jsonpath_not_exists"
+            - cond_type: "attribute"
+              attribute: "spec.source.helm.valuesObject.ingress.hosts"
+              operator: "exists"
