@@ -135,8 +135,8 @@ runs:
         {
           files_with_spaces=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | tr '"' '\n' | grep " " || true)
           if [ -n "$files_with_spaces" ]; then
-            echo "❌ Files with spaces in names found:" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
-            echo "$files_with_spaces" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "::error::❌ Files with spaces in names found:"
+            echo "::error::$files_with_spaces"
             exit 1
           fi
 
