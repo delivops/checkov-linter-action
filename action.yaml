@@ -48,7 +48,7 @@ runs:
         {
           mkdir -p "${{ inputs.checkov_output_folder }}"
           if [ ! -d "${{ inputs.directory }}" ]; then
-            echo "❌ Directory ${{ inputs.directory }} does not exist" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "::error::❌ Directory '${{ inputs.directory }}' does not exist"
             exit 1
           fi
           
@@ -68,8 +68,8 @@ runs:
         {
           invalid_files=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
-            echo "❌ Invalid YAML files found:" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
-            echo "$invalid_files" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "::error::❌ Invalid YAML files found:"
+            echo "::error::$invalid_files"
             exit 1
           fi
           
@@ -90,14 +90,14 @@ runs:
         echo "::group::🔍 Validate Custom Policies"
         {
           if [ ! -d "__checkov-linter-action__/custom_policies" ]; then
-            echo "❌ Custom policies directory not found" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "::error::❌ Custom policies directory not found"
             exit 1
           fi
           
           invalid_files=$(find '__checkov-linter-action__/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
-            echo "❌ Invalid custom policy files found:" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
-            echo "$invalid_files" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "::error::❌ Invalid custom policy files found:"
+            echo "::error::$invalid_files"
             exit 1
           fi
           
@@ -126,7 +126,24 @@ runs:
         files: |
           ${{ inputs.directory }}/**/*.yml
           ${{ inputs.directory }}/**/*.yaml
-        separator: "\" \""
+        separator: '" "'
+
+    - name: Check for Spaces in File Names
+      if: inputs.changed_files_only == 'true'
+      run: |
+        echo "::group::🔍 Check for Spaces in File Names"
+        {
+          files_with_spaces=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | tr '"' '\n' | grep " " || true)
+          if [ -n "$files_with_spaces" ]; then
+            echo "❌ Files with spaces in names found:" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            echo "$files_with_spaces" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+            exit 1
+          fi
+
+          echo "✅ No files with spaces in names found"
+        }
+        echo "::endgroup::"
+      shell: bash
 
     - name: Debug
       if: (success() || failure()) && inputs.debug == 'true'
@@ -172,9 +189,9 @@ runs:
           if grep -q 'FAILED for resource:' "${{ inputs.checkov_output_folder }}/results_cli.txt"; then
             echo "❌ Failed Checkov checks found"
             exit 1
-          else
-            echo "✅ All Checkov checks passed"
           fi
+
+          echo "✅ All Checkov checks passed"
         }
         echo "::endgroup::"
       shell: bash
