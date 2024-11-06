@@ -29,6 +29,10 @@ inputs:
     description: "Publish Checkov results to github step summary"
     required: false
     default: "true"
+  show_success_in_summary:
+    description: "Show success in github step summary"
+    required: false
+    default: "false"
   debug:
     description: "Print debug information"
     required: false
@@ -210,7 +214,7 @@ runs:
         file: ${{ inputs.scan_changed_files_only == 'true' && steps.normalize-changed-files.normalized_changed_files || '' }}
         check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
         skip_check: ${{ inputs.skip_check_ids }}
-        quiet: ${{ inputs.debug != 'true' }}
+        quiet: ${{ inputs.show_success_in_summary == 'true' }}
         output_format: cli
         output_file_path: "${{ inputs.checkov_output_folder }}"
         external_checks_dirs: "__checkov-linter-action__/custom_policies"
