@@ -42,17 +42,12 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Validate Output and Check Directories
+    - name: Validate Output Directory
       run: |
-        echo "::group::📁 Validate Output and Check Directories"
+        echo "::group::📁 Validate Output Directory"
         {
           mkdir -p "${{ inputs.checkov_output_folder }}"
-          if [ ! -d "${{ inputs.directory }}" ]; then
-            echo "::error::❌ Directory '${{ inputs.directory }}' does not exist"
-            exit 1
-          fi
-          
-          echo "✅ Directories validated"
+          echo "✅ Directory validated"
         }
         echo "::endgroup::"
       shell: bash
@@ -66,7 +61,12 @@ runs:
       run: |
         echo "::group::🔍 Validate YAML Files"
         {
-          invalid_files=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+          if [ ! -d "${{ inputs.directory }}" ]; then
+            echo "::error::❌ Directory '${{ inputs.directory }}' does not exist"
+            exit 1
+          fi
+
+          invalid_files=invalid_files=$(find 'env' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
             inline_invalid_files=$(IFS='; '; printf '%s; ' \"${invalid_files[@]}\")
             echo "::error::❌ Invalid YAML files found: $inline_invalid_files"
@@ -94,7 +94,7 @@ runs:
             exit 1
           fi
           
-          invalid_files=$(find '__checkov-linter-action__/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+          invalid_files=$(find '__checkov_linter_action/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
             inline_invalid_files=$(IFS='; '; printf '%s; ' \"${invalid_files[@]}\")
             echo "::error::❌ Invalid custom policy files found: $inline_invalid_files"
