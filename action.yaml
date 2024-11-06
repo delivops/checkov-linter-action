@@ -128,7 +128,7 @@ runs:
       with:
         repository: delivops/checkov-linter-action
         sparse-checkout: custom_policies
-        path: __checkov-linter-action__
+        path: "__checkov-linter-action__"
 
     - name: Validate Custom Policies
       env:
@@ -199,7 +199,7 @@ runs:
         quiet: ${{ inputs.debug != 'true' }}
         output_format: cli
         output_file_path: "${{ inputs.checkov_output_folder }}"
-        external_checks_dirs: __checkov-linter-action__/custom_policies
+        external_checks_dirs: "__checkov-linter-action__/custom_policies"
 
     - name: Fail if Checkov Scan Failed (exit 0 fallback)
       if: success() && steps.run-checkov-scan.outcome != 'success'
