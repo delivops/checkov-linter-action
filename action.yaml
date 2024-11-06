@@ -60,7 +60,7 @@ runs:
         files: |
           ${{ inputs.directory }}/**/*.yml
           ${{ inputs.directory }}/**/*.yaml
-        separator: '\n'
+        separator: "\n"
 
     - name: Check for Spaces in File Names
       env:
