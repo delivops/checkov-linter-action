@@ -170,6 +170,18 @@ runs:
         echo "::endgroup::"
       shell: bash
 
+    - name: Normalize Changed Files
+      id: normalize-changed-files
+      run: |
+        echo "::group::👽 Normalize Changed Files"
+        {
+          echo normalized_changed_files=$(echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}" | tr '\n' ' ')
+          echo "normalized_changed_files=$normalized_changed_files" >> $GITHUB_OUTPUT
+          echo "✅ Normalized changed files"
+        }
+        echo "::endgroup::"
+      shell: bash
+
     - name: Debug
       if: (success() || failure()) && inputs.debug == 'true'
       run: |
@@ -182,18 +194,8 @@ runs:
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
           echo -e "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'No changed files (scan_changed_files_only!=true)' }}"
-        }
-        echo "::endgroup::"
-      shell: bash
-
-    - name: Normalize Changed Files
-      id: normalize-changed-files
-      run: |
-        echo "::group::👽 Normalize Changed Files"
-        {
-          echo normalized_changed_files=$(echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}" | tr '\n' ' ')
-          echo "normalized_changed_files=$normalized_changed_files" >> $GITHUB_OUTPUT
-          echo "✅ Normalized changed files"
+          echo "[debug] Normalized changed files:"
+          echo -e "${{ steps.normalize-changed-files.normalized_changed_files }}"
         }
         echo "::endgroup::"
       shell: bash
