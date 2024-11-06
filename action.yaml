@@ -70,7 +70,7 @@ runs:
         echo "::group::🔍 Check for Spaces in File Names"
         {
           if [ "$SCAN_CHANGED_FILES_ONLY" == "true" ]; then
-            files_to_check='${{ steps.changed-files.outputs.all_changed_files }}'
+            files_to_check="${{ steps.changed-files.outputs.all_changed_files }}"
           else
             files_to_check=$(find "$INPUTS_DIRECTORY" -type f -print0 | xargs -0 -I {} echo '{}')
           fi
@@ -101,7 +101,7 @@ runs:
         echo "::group::🔍 Validate YAML Files"
         {
           if [ "$SCAN_CHANGED_FILES_ONLY" == "true" ]; then
-            files_to_check='${{ steps.changed-files.outputs.all_changed_files }}'
+            files_to_check="${{ steps.changed-files.outputs.all_changed_files }}"
           else
             if [ ! -d "$INPUTS_DIRECTORY" ]; then
               echo "::error::❌ Directory '$INPUTS_DIRECTORY' does not exist"
