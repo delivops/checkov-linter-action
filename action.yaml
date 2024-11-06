@@ -66,7 +66,7 @@ runs:
             exit 1
           fi
 
-          invalid_files=invalid_files=$(find 'env' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+          invalid_files=$(find 'env' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
             inline_invalid_files=$(IFS='; '; printf '%s; ' \"${invalid_files[@]}\")
             echo "::error::❌ Invalid YAML files found: $inline_invalid_files"
