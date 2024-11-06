@@ -60,7 +60,7 @@ runs:
         files: |
           ${{ inputs.directory }}/**/*.yml
           ${{ inputs.directory }}/**/*.yaml
-        separator: "\n"
+        separator: "\0"
 
     - name: Check for Spaces in File Names
       env:
@@ -70,7 +70,7 @@ runs:
         echo "::group::🔍 Check for Spaces in File Names"
         {
           if [ "$SCAN_CHANGED_FILES_ONLY" == "true" ]; then
-            files_to_check="${{ steps.changed-files.outputs.all_changed_files }}"
+            files_to_check=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | xargs -0 -I {} echo '{}')
           else
             files_to_check=$(find "$INPUTS_DIRECTORY" -type f -print0 | xargs -0 -I {} echo '{}')
           fi
@@ -101,7 +101,7 @@ runs:
         echo "::group::🔍 Validate YAML Files"
         {
           if [ "$SCAN_CHANGED_FILES_ONLY" == "true" ]; then
-            files_to_check="${{ steps.changed-files.outputs.all_changed_files }}"
+            files_to_check=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | xargs -0 -I {} echo '{}')
           else
             if [ ! -d "$INPUTS_DIRECTORY" ]; then
               echo "::error::❌ Directory '$INPUTS_DIRECTORY' does not exist"
@@ -141,8 +141,8 @@ runs:
             exit 1
           fi
 
-          custom_policies_files_to_check=$(find "$CUSTOM_POLICIES_DIR" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} echo '{}')
-          invalid_custom_policies_files=$(echo "$custom_policies_files_to_check" | xargs -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+          files_to_check=$(find "$CUSTOM_POLICIES_DIR" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} echo '{}')
+          invalid_custom_policies_files=$(echo "$files_to_check" | xargs -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
 
           if [ -n "$invalid_custom_policies_files" ]; then
             inline_invalid_custom_policies_files=$(echo "$invalid_custom_policies_files" | sed 's/.*/ "&"/' | paste -sd "; " -)
@@ -175,7 +175,7 @@ runs:
       run: |
         echo "::group::👽 Normalize Changed Files"
         {
-          echo normalized_changed_files=$(echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}" | tr '\n' ' ')
+          echo normalized_changed_files=$(echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}" | tr '\0' ' ')
           echo "normalized_changed_files=$normalized_changed_files" >> $GITHUB_OUTPUT
           echo "✅ Normalized changed files"
         }
