@@ -75,7 +75,7 @@ runs:
             files_to_check=$(find "$INPUTS_DIRECTORY" -type f -print0 | xargs -0 -I {} echo '{}')
           fi
 
-          files_with_spaces=$(echo "$files_to_check" | sed 's/" "/\n/g' | grep " ")
+          files_with_spaces=$(echo "$files_to_check" | grep " ")
 
           if [ -n "$files_with_spaces" ]; then
             inline_files_with_spaces=$(echo "$files_with_spaces" | sed 's/.*/ "&"/' | paste -sd "; " -)
@@ -110,7 +110,7 @@ runs:
             files_to_check=$(find "$INPUTS_DIRECTORY" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} echo '{}')
           fi
 
-          invalid_yaml_files=$(echo "$files_to_check" | sed 's/" "/\n/g' | xargs -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+          invalid_yaml_files=$(echo "$files_to_check" | xargs -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
 
           if [ -n "$invalid_yaml_files" ]; then
             inline_invalid_yaml_files=$(echo "$invalid_yaml_files" | sed 's/.*/ "&"/' | paste -sd "; " -)
