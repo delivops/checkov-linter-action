@@ -248,6 +248,10 @@ runs:
           else
             summary="❌ Checkov results not found"
             echo "$summary"
+
+            if [ "$PUBLISH_RESULTS" == "true" ]; then
+              echo "$summary" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
           {
