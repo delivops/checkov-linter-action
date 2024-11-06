@@ -246,7 +246,7 @@ runs:
               echo "⏩ Checkov results not published to github job summary"
             fi
           else
-            summary="❌ Checkov results not found"
+            summary="❌ Error occurred while running Checkov. See action logs for details."
             echo "$summary"
 
             if [ "$PUBLISH_RESULTS" == "true" ]; then
