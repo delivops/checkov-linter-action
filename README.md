@@ -62,16 +62,16 @@ Skips running the custom check with ID `CKV2_CUSTOM_2`.
 
 ## Inputs
 
-| Input                     | Description                                               | Required     | Default                  |
-| ------------------------- | --------------------------------------------------------- | ------------ | ------------------------ |
-| `directory`               | Directory to run Checkov in                               | <i>true</i>  |                          |
-| `changed_files_only`      | Only check changed files (Default: `true` for PR context) | <i>false</i> | `false`                  |
-| `checkov_output_folder`   | Output folder for Checkov results                         | <i>false</i> | `__results__`            |
-| `check_ids`               | Comma-separated list of Checkov check IDs to run          | <i>false</i> | `""` (all custom checks) |
-| `include_built_in_checks` | Include built-in checks in the scan                       | <i>false</i> | `false`                  |
-| `skip_check_ids`          | Comma-separated list of Checkov check IDs to skip         | <i>false</i> | `""` (none skipped)      |
-| `publish_to_step_summary` | Publish Checkov results to GitHub step summary            | <i>false</i> | `true`                   |
-| `debug`                   | Print debug information / Reports passed checks           | <i>false</i> | `false`                  |
+| Input                     | Description                                       | Required     | Default                  |
+| ------------------------- | ------------------------------------------------- | ------------ | ------------------------ |
+| `directory`               | Directory to run Checkov in                       | <i>true</i>  |                          |
+| `scan_changed_files_only` | Only check changed files                          | <i>false</i> | `true` for PR context    |
+| `checkov_output_folder`   | Output folder for Checkov results                 | <i>false</i> | `__results__`            |
+| `check_ids`               | Comma-separated list of Checkov check IDs to run  | <i>false</i> | `""` (all custom checks) |
+| `include_built_in_checks` | Include built-in checks in the scan               | <i>false</i> | `false`                  |
+| `skip_check_ids`          | Comma-separated list of Checkov check IDs to skip | <i>false</i> | `""` (none skipped)      |
+| `publish_to_step_summary` | Publish Checkov results to GitHub step summary    | <i>false</i> | `true`                   |
+| `debug`                   | Print debug information / Reports passed checks   | <i>false</i> | `false`                  |
 
 ## Outputs
 

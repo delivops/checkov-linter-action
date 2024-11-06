@@ -5,7 +5,7 @@ inputs:
   directory:
     description: "Directory to run Checkov in"
     required: true
-  changed_files_only:
+  scan_changed_files_only:
     description: "Only check changed files (Default: 'true' for PR context, 'false' for push context)"
     required: false
     default: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
@@ -52,27 +52,72 @@ runs:
         echo "::endgroup::"
       shell: bash
 
+    - name: Get Changed Files
+      uses: tj-actions/changed-files@v45
+      id: changed-files
+      if: inputs.scan_changed_files_only == 'true'
+      with:
+        files: |
+          ${{ inputs.directory }}/**/*.yml
+          ${{ inputs.directory }}/**/*.yaml
+        separator: '\n'
+
+    - name: Check for Spaces in File Names
+      env:
+        SCAN_CHANGED_FILES_ONLY: ${{ inputs.scan_changed_files_only }}
+        INPUTS_DIRECTORY: ${{ inputs.directory }}
+      run: |
+        echo "::group::🔍 Check for Spaces in File Names"
+        {
+          if [ "$SCAN_CHANGED_FILES_ONLY" == "true" ]; then
+            files_to_check='${{ steps.changed-files.outputs.all_changed_files }}'
+          else
+            files_to_check=$(find "$INPUTS_DIRECTORY" -type f -print0 | xargs -0 -I {} echo '{}')
+          fi
+
+          files_with_spaces=$(echo "$files_to_check" | sed 's/" "/\n/g' | grep " ")
+
+          if [ -n "$files_with_spaces" ]; then
+            inline_files_with_spaces=$(echo "$files_with_spaces" | sed 's/.*/ "&"/' | paste -sd "; " -)
+            echo "::error::❌ Files with spaces in names found: $inline_files_with_spaces"
+            exit 1
+          fi
+
+          echo "✅ No files with spaces in names found"
+        }
+        echo "::endgroup::"
+      shell: bash
+
     - name: Install yq
       uses: mikefarah/yq@master
       with:
         cmd: yq --version
 
     - name: Validate YAML Files
+      env:
+        SCAN_CHANGED_FILES_ONLY: ${{ inputs.scan_changed_files_only }}
+        INPUTS_DIRECTORY: ${{ inputs.directory }}
       run: |
         echo "::group::🔍 Validate YAML Files"
         {
-          if [ ! -d "${{ inputs.directory }}" ]; then
-            echo "::error::❌ Directory '${{ inputs.directory }}' does not exist"
+          if [ "$SCAN_CHANGED_FILES_ONLY" == "true" ]; then
+            files_to_check='${{ steps.changed-files.outputs.all_changed_files }}'
+          else
+            if [ ! -d "$INPUTS_DIRECTORY" ]; then
+              echo "::error::❌ Directory '$INPUTS_DIRECTORY' does not exist"
+              exit 1
+            fi
+            files_to_check=$(find "$INPUTS_DIRECTORY" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} echo '{}')
+          fi
+
+          invalid_yaml_files=$(echo "$files_to_check" | sed 's/" "/\n/g' | xargs -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+
+          if [ -n "$invalid_yaml_files" ]; then
+            inline_invalid_yaml_files=$(echo "$invalid_yaml_files" | sed 's/.*/ "&"/' | paste -sd "; " -)
+            echo "::error::❌ Invalid YAML files found: $inline_invalid_yaml_files"
             exit 1
           fi
 
-          invalid_files=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
-          if [ -n "$invalid_files" ]; then
-            inline_invalid_files=$(IFS='; '; printf '%s; ' "${invalid_files[@]}")
-            echo "::error::❌ Invalid YAML files found: $inline_invalid_files"
-            exit 1
-          fi
-          
           echo "✅ All YAML files are valid"
         }
         echo "::endgroup::"
@@ -86,21 +131,25 @@ runs:
         path: __checkov-linter-action__
 
     - name: Validate Custom Policies
+      env:
+        CUSTOM_POLICIES_DIR: "__checkov-linter-action__/custom_policies"
       run: |
         echo "::group::🔍 Validate Custom Policies"
         {
-          if [ ! -d "__checkov-linter-action__/custom_policies" ]; then
+          if [ ! -d "$CUSTOM_POLICIES_DIR" ]; then
             echo "::error::❌ Custom policies directory not found"
             exit 1
           fi
-          
-          invalid_files=$(find '__checkov-linter-action/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
-          if [ -n "$invalid_files" ]; then
-            inline_invalid_files=$(IFS='; '; printf '%s; ' "${invalid_files[@]}")
-            echo "::error::❌ Invalid custom policy files found: $inline_invalid_files"
+
+          custom_policies_files_to_check=$(find "$CUSTOM_POLICIES_DIR" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} echo '{}')
+          invalid_custom_policies_files=$(echo "$custom_policies_files_to_check" | xargs -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+
+          if [ -n "$invalid_custom_policies_files" ]; then
+            inline_invalid_custom_policies_files=$(echo "$invalid_custom_policies_files" | sed 's/.*/ "&"/' | paste -sd "; " -)
+            echo "::error::❌ Invalid custom policy files found: $inline_invalid_custom_policies_files"
             exit 1
           fi
-          
+
           echo "✅ Custom policies validated"
         }
         echo "::endgroup::"
@@ -108,39 +157,15 @@ runs:
 
     - name: Get Custom Policy Check IDs
       id: get-custom-policy-check-ids
+      env:
+        CUSTOM_POLICIES_DIR: "__checkov-linter-action__/custom_policies"
       run: |
         echo "::group::🆔 Get Custom Policy Check IDs"
         {
-          check_ids=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -exec yq '.metadata.id' {} \; | tr '\n' ',' | sed 's/,$//')
+          check_ids=$(find "$CUSTOM_POLICIES_DIR" -type f \( -name '*.yml' -o -name '*.yaml' \) -exec yq '.metadata.id' {} \; | tr '\n' ',' | sed 's/,$//')
           echo "check_ids=$check_ids" >> $GITHUB_OUTPUT
-          echo "Found check IDs: $check_ids"
-        }
-        echo "::endgroup::"
-      shell: bash
 
-    - name: Get Changed Files
-      uses: tj-actions/changed-files@v45
-      id: changed-files
-      if: inputs.changed_files_only == 'true'
-      with:
-        files: |
-          ${{ inputs.directory }}/**/*.yml
-          ${{ inputs.directory }}/**/*.yaml
-        separator: '" "'
-
-    - name: Check for Spaces in File Names
-      if: inputs.changed_files_only == 'true'
-      run: |
-        echo "::group::🔍 Check for Spaces in File Names"
-        {
-          files_with_spaces=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | sed 's/" "/\n/g' | grep " " || true)
-          if [ -n "$files_with_spaces" ]; then
-            inline_files_with_spaces=$(echo "$files_with_spaces" | sed 's/.*/ "&"/' | paste -sd "; " -)
-            echo -e "::error::❌ Files with spaces in names found: $inline_files_with_spaces"
-            exit 1
-          fi
-
-          echo "✅ No files with spaces in names found"
+          echo "✅ Found check IDs: $check_ids"
         }
         echo "::endgroup::"
       shell: bash
@@ -156,7 +181,7 @@ runs:
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
-          echo '${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || 'inputs.changed_files_only!=true' }}' | sed 's/" "/"\n"/g'
+          echo -e "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'inputs.scan_changed_files_only!=true' }}"
         }
         echo "::endgroup::"
       shell: bash
@@ -168,7 +193,7 @@ runs:
         SKIP_PATH: "__checkov-linter-action__/custom_policies"
       with:
         directory: ${{ inputs.directory }}
-        file: ${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
+        file: ${{ inputs.scan_changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || '' }}
         check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
         skip_check: ${{ inputs.skip_check_ids }}
         quiet: ${{ inputs.debug != 'true' }}
@@ -178,16 +203,18 @@ runs:
 
     - name: Fail if Checkov Scan Failed (exit 0 fallback)
       if: success() && steps.run-checkov-scan.outcome != 'success'
+      env:
+        CHECKOV_OUTPUT_FILE: ${{ inputs.checkov_output_folder }}/results_cli.txt
       run: |
         echo "::group::❗ Fail if Checkov Scan Failed (exit 0 fallback)"
         {
-          if [ ! -f "${{ inputs.checkov_output_folder }}/results_cli.txt" ]; then
-            echo "❌ Checkov results file not found!" ${{ inputs.publish_to_step_summary == 'true' && ' | tee -a $GITHUB_STEP_SUMMARY' || '' }}
+          if [ ! -f "$CHECKOV_OUTPUT_FILE" ]; then
+            echo "::error::❌ Checkov results file not found!"
             exit 1
           fi
 
-          if grep -q 'FAILED for resource:' "${{ inputs.checkov_output_folder }}/results_cli.txt"; then
-            echo "❌ Failed Checkov checks found"
+          if grep -q 'FAILED for resource:' "$CHECKOV_OUTPUT_FILE"; then
+            echo "::error::❌ Failed Checkov checks found"
             exit 1
           fi
 
@@ -211,7 +238,7 @@ runs:
               s/^(\t)FAILED/❌\1FAILED/g;
               s/^Check:/📋 Check:/g
             ')
-            
+
             if [ "$PUBLISH_RESULTS" == "true" ]; then
               echo "$summary" >> $GITHUB_STEP_SUMMARY
               echo "✅ Checkov results published to github job summary"
