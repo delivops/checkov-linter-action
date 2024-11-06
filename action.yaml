@@ -175,7 +175,7 @@ runs:
       run: |
         echo "::group::👽 Normalize Changed Files"
         {
-          echo normalized_changed_files=$(echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}" | tr '\0' ' ')
+          normalized_changed_files=$(echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}" | tr '\0' ' ')
           echo "normalized_changed_files=$normalized_changed_files" >> $GITHUB_OUTPUT
           echo "✅ Normalized changed files"
         }
