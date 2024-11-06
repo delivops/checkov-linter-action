@@ -135,7 +135,7 @@ runs:
         {
           files_with_spaces=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | sed 's/" "/\n/g' | grep " " || true)
           if [ -n "$files_with_spaces" ]; then
-            inline_files_with_spaces=$(echo "$files_with_spaces" | sed 's/.*/"&"/' | paste -sd "; " -)
+            inline_files_with_spaces=$(echo "$files_with_spaces" | sed 's/.*/ "&"/' | paste -sd "; " -)
             echo -e "::error::❌ Files with spaces in names found: $inline_files_with_spaces"
             exit 1
           fi
