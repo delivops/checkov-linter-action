@@ -135,7 +135,7 @@ runs:
         {
           files_with_spaces=$(echo '${{ steps.changed-files.outputs.all_changed_files }}' | tr '"' '\n' | grep " " || true)
           if [ -n "$files_with_spaces" ]; then
-            echo -e "::error::❌ Files with spaces in names found:\n$files_with_spaces"
+            echo -e "::error::❌ Files with spaces in names found: $(echo "$files_with_spaces" | paste -sd "; " -)"
             exit 1
           fi
 
