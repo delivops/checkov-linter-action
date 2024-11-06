@@ -210,8 +210,8 @@ runs:
       env:
         SKIP_PATH: "__checkov-linter-action__/custom_policies"
       with:
-        directory: ${{ inputs.scan_changed_files_only == 'true' && '' || inputs.directory }}
-        file: ${{ inputs.scan_changed_files_only == 'true' && steps.normalize-changed-files.normalized_changed_files || '' }}
+        directory: ${{ inputs.scan_changed_files_only != 'true' && inputs.directory || '' }}
+        file: ${{ inputs.scan_changed_files_only == 'true' && steps.normalize-changed-files.outputs.normalized_changed_files || '' }}
         check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
         skip_check: ${{ inputs.skip_check_ids }}
         quiet: ${{ inputs.show_success_in_summary == 'true' }}
