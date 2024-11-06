@@ -68,8 +68,7 @@ runs:
         {
           invalid_files=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
-            echo "::error::❌ Invalid YAML files found:"
-            echo "::error::$invalid_files"
+            echo "::error::❌ Invalid YAML files found: $(IFS='; '; printf '%s; ' \"${invalid_files[@]}\")"
             exit 1
           fi
           
@@ -96,8 +95,7 @@ runs:
           
           invalid_files=$(find '__checkov-linter-action__/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
-            echo "::error::❌ Invalid custom policy files found:"
-            echo "::error::$invalid_files"
+            echo "::error::❌ Invalid custom policy files found: $(IFS='; '; printf '%s; ' \"${invalid_files[@]}\")"
             exit 1
           fi
           
