@@ -186,14 +186,26 @@ runs:
         echo "::endgroup::"
       shell: bash
 
+    - name: Normalize Changed Files
+      id: normalize-changed-files
+      run: |
+        echo "::group::👽 Normalize Changed Files"
+        {
+          echo normalized_changed_files=$(echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}" | tr '\n' ' ')
+          echo "normalized_changed_files=$normalized_changed_files" >> $GITHUB_OUTPUT
+          echo "✅ Normalized changed files"
+        }
+        echo "::endgroup::"
+      shell: bash
+
     - name: Run Checkov Scan
       id: run-checkov-scan
       uses: bridgecrewio/checkov-action@v12
       env:
         SKIP_PATH: "__checkov-linter-action__/custom_policies"
       with:
-        directory: ${{ inputs.directory }}
-        file: ${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}
+        directory: ${{ inputs.scan_changed_files_only == 'true' && '' || inputs.directory }}
+        file: ${{ inputs.scan_changed_files_only == 'true' && steps.normalize-changed-files.normalized_changed_files || '' }}
         check: ${{ inputs.check_ids != '' && inputs.check_ids || (inputs.include_built_in_checks == 'true' && '' || steps.get-custom-policy-check-ids.outputs.check_ids) }}
         skip_check: ${{ inputs.skip_check_ids }}
         quiet: ${{ inputs.debug != 'true' }}
