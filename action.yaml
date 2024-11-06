@@ -176,7 +176,7 @@ runs:
         echo "::group::👽 Normalize Changed Files"
         {
           normalized_changed_files=$(echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || '' }}" | tr '\0' ' ')
-          echo "normalized_changed_files=$normalized_changed_files" >> $GITHUB_OUTPUT
+          echo "normalized_changed_files=$normalized_changed_files" | tee -a $GITHUB_OUTPUT
           echo "✅ Normalized changed files"
         }
         echo "::endgroup::"
@@ -193,7 +193,7 @@ runs:
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
-          echo -e "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'No changed files (scan_changed_files_only!=true)' }}"
+          echo -e "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'No changed files (scan_changed_files_only!=true)' }}" | tr '\0' '\n'
           echo "[debug] Normalized changed files:"
           echo -e "${{ steps.normalize-changed-files.normalized_changed_files }}"
         }
