@@ -66,9 +66,9 @@ runs:
             exit 1
           fi
 
-          invalid_files=$(find 'env' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+          invalid_files=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
-            inline_invalid_files=$(IFS='; '; printf '%s; ' \"${invalid_files[@]}\")
+            inline_invalid_files=$(IFS='; '; printf '%s; ' "${invalid_files[@]}")
             echo "::error::❌ Invalid YAML files found: $inline_invalid_files"
             exit 1
           fi
@@ -94,9 +94,9 @@ runs:
             exit 1
           fi
           
-          invalid_files=$(find '__checkov_linter_action/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
+          invalid_files=$(find '__checkov-linter-action/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
           if [ -n "$invalid_files" ]; then
-            inline_invalid_files=$(IFS='; '; printf '%s; ' \"${invalid_files[@]}\")
+            inline_invalid_files=$(IFS='; '; printf '%s; ' "${invalid_files[@]}")
             echo "::error::❌ Invalid custom policy files found: $inline_invalid_files"
             exit 1
           fi
@@ -111,7 +111,7 @@ runs:
       run: |
         echo "::group::🆔 Get Custom Policy Check IDs"
         {
-          check_ids=$(find '__checkov-linter-action__/custom_policies' -type f \( -name '*.yml' -o -name '*.yaml' \) -exec yq '.metadata.id' {} \; | tr '\n' ',' | sed 's/,$//')
+          check_ids=$(find '${{ inputs.directory }}' -type f \( -name '*.yml' -o -name '*.yaml' \) -exec yq '.metadata.id' {} \; | tr '\n' ',' | sed 's/,$//')
           echo "check_ids=$check_ids" >> $GITHUB_OUTPUT
           echo "Found check IDs: $check_ids"
         }
@@ -156,7 +156,7 @@ runs:
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
-          echo '${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || 'inputs.changed_files_only!=true' }}' | sed 's/\" \"/\"\n\"/g'
+          echo '${{ inputs.changed_files_only == 'true' && format('"{0}"', steps.changed-files.outputs.all_changed_files) || 'inputs.changed_files_only!=true' }}' | sed 's/" "/"\n"/g'
         }
         echo "::endgroup::"
       shell: bash
