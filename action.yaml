@@ -71,11 +71,14 @@ runs:
         {
           if [ "$SCAN_CHANGED_FILES_ONLY" == "true" ]; then
             files_to_check='${{ steps.changed-files.outputs.all_changed_files }}'
+            echo "1";
           else
             files_to_check=$(find "$INPUTS_DIRECTORY" -type f -print0 | xargs -0 -I {} echo '{}')
+            echo "2";
           fi
 
           files_with_spaces=$(echo "$files_to_check" | grep " ")
+          echo "3";
 
           if [ -n "$files_with_spaces" ]; then
             inline_files_with_spaces=$(echo "$files_with_spaces" | sed 's/.*/ "&"/' | paste -sd "; " -)
