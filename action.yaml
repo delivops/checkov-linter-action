@@ -78,7 +78,7 @@ runs:
           files_with_spaces=$(echo "$files_to_check" | grep " ")
 
           if [ -n "$files_with_spaces" ]; then
-            inline_files_with_spaces=$(echo "$files_with_spaces" | sed 's/.*/ "&"/' | paste -sd "; " -)
+            inline_files_with_spaces=$(echo "$files_with_spaces" | sed 's/.*/"&"/' | paste -sd "; " -)
             echo "::error::❌ Files with spaces in names found: $inline_files_with_spaces"
             exit 1
           fi
@@ -113,7 +113,7 @@ runs:
           invalid_yaml_files=$(echo "$files_to_check" | xargs -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
 
           if [ -n "$invalid_yaml_files" ]; then
-            inline_invalid_yaml_files=$(echo "$invalid_yaml_files" | sed 's/.*/ "&"/' | paste -sd "; " -)
+            inline_invalid_yaml_files=$(echo "$invalid_yaml_files" | sed 's/.*/"&"/' | paste -sd "; " -)
             echo "::error::❌ Invalid YAML files found: $inline_invalid_yaml_files"
             exit 1
           fi
@@ -145,7 +145,7 @@ runs:
           invalid_custom_policies_files=$(echo "$custom_policies_files_to_check" | xargs -I {} sh -c 'yq eval "{}" >/dev/null 2>&1 || echo "{}"')
 
           if [ -n "$invalid_custom_policies_files" ]; then
-            inline_invalid_custom_policies_files=$(echo "$invalid_custom_policies_files" | sed 's/.*/ "&"/' | paste -sd "; " -)
+            inline_invalid_custom_policies_files=$(echo "$invalid_custom_policies_files" | sed 's/.*/"&"/' | paste -sd "; " -)
             echo "::error::❌ Invalid custom policy files found: $inline_invalid_custom_policies_files"
             exit 1
           fi
@@ -181,7 +181,7 @@ runs:
           echo '[debug] Dir tree:'
           ls -R | grep ":$" | sed -e 's/:$//' -e 's/[^-][^\/]*\//--/g' -e 's/^/   /' -e 's/-/|/'
           echo "[debug] Changed files:"
-          echo -e "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'No changed files (scan_changed_files_only!=true)' }}"
+          echo "${{ inputs.scan_changed_files_only == 'true' && steps.changed-files.outputs.all_changed_files || 'No changed files (scan_changed_files_only!=true)' }}"
         }
         echo "::endgroup::"
       shell: bash
